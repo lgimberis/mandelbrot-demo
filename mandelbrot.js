@@ -46,10 +46,16 @@ async function paintMandelbrot() {
           let y2 = complexArrays[3 * (y * width + x) + 1];
           let w = complexArrays[3 * (y * width + x) + 2];
 
-          if (x2 + y2 > 4.0 || iterations == MAX_ITERATIONS) {
+          if (x2 + y2 > 4.0 || iterations == MAX_ITERATIONS - 1) {
             finishedArray[y * width + x] = 1;
             maxIterationCount = iterationCountArray[y * width + x];
+            if (x2 + y2 <= 4.0) {
+              // Make sure it's blank
+              let index = 4 * (y * width + x);
+              imageArray[index + 3] = 0;
+            }
           }
+
 
           let x_new = x2 - y2 + x_value;
           let y_new = w - x2 - y2 + y_value;
@@ -57,19 +63,13 @@ async function paintMandelbrot() {
           complexArrays[3 * (y * width + x)] = x_new * x_new;
           complexArrays[3 * (y * width + x) + 1] = y_new * y_new;
           complexArrays[3 * (y * width + x) + 2] = (x_new + y_new) * (x_new + y_new);
+        } else {
+          let index = 4 * (y * width + x);
+          imageArray[index + 3] = 255 * (iterations + 1 - iterationCountArray[y * width + x]) / (iterations + 1);
         }
-        let index = 4 * (y * width + x);
-        imageArray[index + 3] = 255 * (iterations + 1 - iterationCountArray[y * width + x]) / (iterations + 1);
       }
     }
-    if (isBuffering) {
-      // for (let index = 0; index < height * width; index++) {
-      //   bufferedImageArray[4 * index + 3] = 255 * (iterations + 1 - iterationCountArray[index]) / (iterations + 1);
-      // }
-      ctx.putImageData(new ImageData(bufferedImageArray, width, height), 0, 0);
-    } else {
-      ctx.putImageData(new ImageData(imageArray, width, height), 0, 0);
-    }
+    ctx.putImageData(new ImageData(imageArray, width, height), 0, 0);
     await limiter;
   }
 }
@@ -129,6 +129,10 @@ window.addEventListener('wheel', function(event) {
       }
       bufferIndex += (zoomFactor - 1) * width;
       sourceIndex += width - Math.floor(width / zoomFactor);
+    }
+
+    for (let i = 3; i < 4 * width * height; i += 4) {
+      imageArray[i] = bufferedImageArray[i];
     }
 
     x_min = new_x_min;
