@@ -2,7 +2,7 @@ const X_MIN_MIN = -2.05;
 const X_MAX_MAX = 0.47;
 const Y_MIN_MIN = -1.12;
 const Y_MAX_MAX = 1.12;
-const MAX_ITERATIONS = 100;
+const MAX_ITERATIONS = 400;
 
 let x_min = X_MIN_MIN;
 let x_max = X_MAX_MAX;
@@ -26,15 +26,18 @@ for (let index = 0; index < width * height; index++) {
   bufferedImageArray[4 * index] = 255;
 }
 let isBuffering = false;
+let isPainting = false;
 let sequence = 0;
 
 async function paintMandelbrot() {
   let our_sequence = sequence;
+  isPainting = true;
   for (let iterations = 0; iterations < MAX_ITERATIONS; iterations++) {
     if (our_sequence != sequence) {
+      isPainting = false;
       return;
     }
-    let limiter = new Promise(r => setTimeout(r, 100));
+    let limiter = new Promise(r => setTimeout(r, 50));
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         if (finishedArray[y * width + x] == 0) {
@@ -48,12 +51,8 @@ async function paintMandelbrot() {
 
           if (x2 + y2 > 4.0 || iterations == MAX_ITERATIONS - 1) {
             finishedArray[y * width + x] = 1;
-            maxIterationCount = iterationCountArray[y * width + x];
-            if (x2 + y2 <= 4.0) {
-              // Make sure it's blank
-              let index = 4 * (y * width + x);
-              imageArray[index + 3] = 0;
-            }
+            let index = 4 * (y * width + x) + 3;
+            imageArray[index] = 255 * (iterations + 1 - iterationCountArray[y * width + x]) / (iterations + 1);
           }
 
 
@@ -72,14 +71,19 @@ async function paintMandelbrot() {
     ctx.putImageData(new ImageData(imageArray, width, height), 0, 0);
     await limiter;
   }
+  isPainting = false;
 }
 
 window.addEventListener('DOMContentLoaded', function() {
   paintMandelbrot();
 });
 
-window.addEventListener('wheel', function(event) {
+window.addEventListener('wheel', async function(event) {
   // Determine scroll point epicenter
+  sequence += 1;
+  while (isPainting) {
+    await new Promise(r => setTimeout(r, 100));
+  }
   let scrollX = window.scrollX + event.clientX;
   let epicenterX = x_min + (x_max - x_min) * scrollX / width;
   let scrollY = window.scrollY + event.clientY;
@@ -156,6 +160,5 @@ window.addEventListener('wheel', function(event) {
   complexArrays.fill(0.0);
   iterationCountArray.fill(0);
   finishedArray.fill(0);
-  sequence += 1;
   paintMandelbrot();
 });
