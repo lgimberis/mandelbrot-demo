@@ -11,12 +11,14 @@ let y_max = Y_MAX_MAX;
 
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
-
-const width = canvas.width;
-const height = canvas.height;
+const width = Math.min(window.innerWidth, canvas.parentElement.clientWidth);
+const height = Math.min(window.innerHeight, canvas.parentElement.clientHeight);
+ctx.canvas.width = width;
+ctx.canvas.height = height;
 const complexArrays = new Float64Array(3 * width * height).fill(0.0);
 const iterationCountArray = new Int16Array(width * height).fill(0);
 const finishedArray = new Uint8Array(width * height).fill(0);
+const rect = canvas.getBoundingClientRect();
 
 const imageArray = new Uint8ClampedArray(4 * width * height).fill(0);
 const bufferedImageArray = new Uint8ClampedArray(4 * width * height).fill(0);
@@ -84,9 +86,9 @@ window.addEventListener('wheel', async function(event) {
   while (isPainting) {
     await new Promise(r => setTimeout(r, 100));
   }
-  let scrollX = window.scrollX + event.clientX;
+  let scrollX = window.scrollX + event.clientX - rect.left;
   let epicenterX = x_min + (x_max - x_min) * scrollX / width;
-  let scrollY = window.scrollY + event.clientY;
+  let scrollY = window.scrollY + event.clientY - rect.top;
   let epicenterY = y_max - (y_max - y_min) * scrollY / height;
   if (event.deltaY < 0) {
     // Zoom in
