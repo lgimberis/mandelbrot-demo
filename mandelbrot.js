@@ -9,7 +9,7 @@ let x_max = X_MAX_MAX;
 let y_min = Y_MIN_MIN;
 let y_max = Y_MAX_MAX;
 
-const canvas = document.querySelector('canvas');
+const canvas = document.getElementById('mandelbrot-canvas');
 const ctx = canvas.getContext('2d');
 const width = Math.min(window.innerWidth, canvas.parentElement.clientWidth);
 const height = Math.min(window.innerHeight, canvas.parentElement.clientHeight);
