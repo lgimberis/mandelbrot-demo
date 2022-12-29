@@ -87,8 +87,12 @@ window.addEventListener('wheel', async function(event) {
     await new Promise(r => setTimeout(r, 100));
   }
   let scrollX = window.scrollX + event.clientX - rect.left;
-  let epicenterX = x_min + (x_max - x_min) * scrollX / width;
   let scrollY = window.scrollY + event.clientY - rect.top;
+
+  if (scrollX < 0 || scrollX > width || scrollY < 0 || scrollY > height) {
+    return;
+  }
+  let epicenterX = x_min + (x_max - x_min) * scrollX / width;
   let epicenterY = y_max - (y_max - y_min) * scrollY / height;
   if (event.deltaY < 0) {
     // Zoom in
