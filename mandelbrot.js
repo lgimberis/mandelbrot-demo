@@ -1,3 +1,5 @@
+export function setupMandelbrot();
+
 const X_MIN_MIN = -2.05;
 const X_MAX_MAX = 0.47;
 const Y_MIN_MIN = -1.12;
@@ -9,24 +11,6 @@ let x_max = X_MAX_MAX;
 let y_min = Y_MIN_MIN;
 let y_max = Y_MAX_MAX;
 
-const canvas = document.getElementById('mandelbrot-canvas');
-const ctx = canvas.getContext('2d');
-const width = Math.min(window.innerWidth, canvas.parentElement.clientWidth);
-const height = Math.min(window.innerHeight, canvas.parentElement.clientHeight);
-ctx.canvas.width = width;
-ctx.canvas.height = height;
-const complexArrays = new Float64Array(3 * width * height).fill(0.0);
-const iterationCountArray = new Int16Array(width * height).fill(0);
-const finishedArray = new Uint8Array(width * height).fill(0);
-const rect = canvas.getBoundingClientRect();
-
-const imageArray = new Uint8ClampedArray(4 * width * height).fill(0);
-const bufferedImageArray = new Uint8ClampedArray(4 * width * height).fill(0);
-
-for (let index = 0; index < width * height; index++) {
-  imageArray[4 * index] = 255;
-  bufferedImageArray[4 * index] = 255;
-}
 let isBuffering = false;
 let isPainting = false;
 let sequence = 0;
@@ -76,95 +60,117 @@ async function paintMandelbrot() {
   isPainting = false;
 }
 
-window.addEventListener('DOMContentLoaded', function() {
-  paintMandelbrot();
-});
+export function setupMandelbrot() {
 
-window.addEventListener('wheel', async function(event) {
-  // Determine scroll point epicenter
-  sequence += 1;
-  while (isPainting) {
-    await new Promise(r => setTimeout(r, 100));
+  const canvas = document.getElementById('mandelbrot-canvas');
+  const ctx = canvas.getContext('2d');
+  const width = Math.min(window.innerWidth, canvas.parentElement.clientWidth);
+  const height = Math.min(window.innerHeight, canvas.parentElement.clientHeight);
+  ctx.canvas.width = width;
+  ctx.canvas.height = height;
+  const complexArrays = new Float64Array(3 * width * height).fill(0.0);
+  const iterationCountArray = new Int16Array(width * height).fill(0);
+  const finishedArray = new Uint8Array(width * height).fill(0);
+  const rect = canvas.getBoundingClientRect();
+
+  const imageArray = new Uint8ClampedArray(4 * width * height).fill(0);
+  const bufferedImageArray = new Uint8ClampedArray(4 * width * height).fill(0);
+
+  for (let index = 0; index < width * height; index++) {
+    imageArray[4 * index] = 255;
+    bufferedImageArray[4 * index] = 255;
   }
-  let scrollX = window.scrollX + event.clientX - rect.left;
-  let scrollY = window.scrollY + event.clientY - rect.top;
+  window.addEventListener('DOMContentLoaded', function() {
+    paintMandelbrot();
+  });
 
-  if (scrollX < 0 || scrollX > width || scrollY < 0 || scrollY > height) {
-    return;
-  }
-  let epicenterX = x_min + (x_max - x_min) * scrollX / width;
-  let epicenterY = y_max - (y_max - y_min) * scrollY / height;
-  if (event.deltaY < 0) {
-    // Zoom in
-    const zoomFactor = 8;
-    let new_x_min = epicenterX - 0.5 / zoomFactor * (x_max - x_min);
-    let new_x_max = epicenterX + 0.5 / zoomFactor * (x_max - x_min);
-    if (new_x_min < X_MIN_MIN) {
-      new_x_min = X_MIN_MIN;
-      new_x_max = X_MIN_MIN + (x_max - x_min) / zoomFactor;
-    } else if (new_x_max > X_MAX_MAX) {
-      new_x_max = X_MAX_MAX;
-      new_x_min = X_MAX_MAX - (x_max - x_min) / zoomFactor;
+  window.addEventListener('wheel', async function(event) {
+    // Determine scroll point epicenter
+    sequence += 1;
+    while (isPainting) {
+      await new Promise(r => setTimeout(r, 100));
     }
+    let scrollX = window.scrollX + event.clientX - rect.left;
+    let scrollY = window.scrollY + event.clientY - rect.top;
 
-    let new_y_min = epicenterY - 0.5 / zoomFactor * (y_max - y_min);
-    let new_y_max = epicenterY + 0.5 / zoomFactor * (y_max - y_min);
-    if (new_y_min < Y_MIN_MIN) {
-      new_y_min = Y_MIN_MIN;
-      new_y_max = Y_MIN_MIN + (y_max - y_min) / zoomFactor;
-    } else if (new_y_max > Y_MAX_MAX) {
-      new_y_max = Y_MAX_MAX;
-      new_y_min = Y_MAX_MAX - (y_max - y_min) / zoomFactor;
+    if (scrollX < 0 || scrollX > width || scrollY < 0 || scrollY > height) {
+      return;
     }
-
-    // Rather than entirely clearing the image, and since it takes increasingly long times to update the drawing as we zoom in,
-    // Provide an initial zoomed sample of the previous image of this region
-
-    // Get the starting index of our copied region
-
-    const regionXOffset = Math.floor((new_x_min - x_min) / (x_max - x_min) * width);
-    const regionYOffset = Math.floor((y_max - new_y_max) / (y_max - y_min) * height);
-    let sourceIndex = regionYOffset * width + regionXOffset;
-    let bufferIndex = 0;
-    isBuffering = true;
-    for (let sourceY = 0; sourceY < Math.floor(height / zoomFactor); sourceY++) {
-      for (let sourceX = 0; sourceX < Math.floor(width / zoomFactor); sourceX++) {
-        for (let horizontalRepeat = 0; horizontalRepeat < zoomFactor; horizontalRepeat++) {
-          for (let verticalRepeat = 0; verticalRepeat < zoomFactor; verticalRepeat++) {
-            bufferedImageArray[4 * (bufferIndex + verticalRepeat * width) + 3] = imageArray[4 * sourceIndex + 3];
-          }
-          bufferIndex++;
-        }
-        sourceIndex++;
+    let epicenterX = x_min + (x_max - x_min) * scrollX / width;
+    let epicenterY = y_max - (y_max - y_min) * scrollY / height;
+    if (event.deltaY < 0) {
+      // Zoom in
+      const zoomFactor = 8;
+      let new_x_min = epicenterX - 0.5 / zoomFactor * (x_max - x_min);
+      let new_x_max = epicenterX + 0.5 / zoomFactor * (x_max - x_min);
+      if (new_x_min < X_MIN_MIN) {
+        new_x_min = X_MIN_MIN;
+        new_x_max = X_MIN_MIN + (x_max - x_min) / zoomFactor;
+      } else if (new_x_max > X_MAX_MAX) {
+        new_x_max = X_MAX_MAX;
+        new_x_min = X_MAX_MAX - (x_max - x_min) / zoomFactor;
       }
-      bufferIndex += (zoomFactor - 1) * width;
-      sourceIndex += width - Math.floor(width / zoomFactor);
-    }
 
-    for (let i = 3; i < 4 * width * height; i += 4) {
-      imageArray[i] = bufferedImageArray[i];
-    }
+      let new_y_min = epicenterY - 0.5 / zoomFactor * (y_max - y_min);
+      let new_y_max = epicenterY + 0.5 / zoomFactor * (y_max - y_min);
+      if (new_y_min < Y_MIN_MIN) {
+        new_y_min = Y_MIN_MIN;
+        new_y_max = Y_MIN_MIN + (y_max - y_min) / zoomFactor;
+      } else if (new_y_max > Y_MAX_MAX) {
+        new_y_max = Y_MAX_MAX;
+        new_y_min = Y_MAX_MAX - (y_max - y_min) / zoomFactor;
+      }
 
-    x_min = new_x_min;
-    x_max = new_x_max;
-    y_min = new_y_min;
-    y_max = new_y_max;
-  } else {
-    // Zoom out
-    isBuffering = false;
-    for (let i = 3; i < 4 * width * height; i += 4) {
-      imageArray[i] = 0;
-    }
+      // Rather than entirely clearing the image, and since it takes increasingly long times to update the drawing as we zoom in,
+      // Provide an initial zoomed sample of the previous image of this region
 
-    // Reset zoom level entirely
-    x_min = X_MIN_MIN;
-    x_max = X_MAX_MAX;
-    y_min = Y_MIN_MIN;
-    y_max = Y_MAX_MAX;
-  }
-  iterations = 0;
-  complexArrays.fill(0.0);
-  iterationCountArray.fill(0);
-  finishedArray.fill(0);
-  paintMandelbrot();
-});
+      // Get the starting index of our copied region
+
+      const regionXOffset = Math.floor((new_x_min - x_min) / (x_max - x_min) * width);
+      const regionYOffset = Math.floor((y_max - new_y_max) / (y_max - y_min) * height);
+      let sourceIndex = regionYOffset * width + regionXOffset;
+      let bufferIndex = 0;
+      isBuffering = true;
+      for (let sourceY = 0; sourceY < Math.floor(height / zoomFactor); sourceY++) {
+        for (let sourceX = 0; sourceX < Math.floor(width / zoomFactor); sourceX++) {
+          for (let horizontalRepeat = 0; horizontalRepeat < zoomFactor; horizontalRepeat++) {
+            for (let verticalRepeat = 0; verticalRepeat < zoomFactor; verticalRepeat++) {
+              bufferedImageArray[4 * (bufferIndex + verticalRepeat * width) + 3] = imageArray[4 * sourceIndex + 3];
+            }
+            bufferIndex++;
+          }
+          sourceIndex++;
+        }
+        bufferIndex += (zoomFactor - 1) * width;
+        sourceIndex += width - Math.floor(width / zoomFactor);
+      }
+
+      for (let i = 3; i < 4 * width * height; i += 4) {
+        imageArray[i] = bufferedImageArray[i];
+      }
+
+      x_min = new_x_min;
+      x_max = new_x_max;
+      y_min = new_y_min;
+      y_max = new_y_max;
+    } else {
+      // Zoom out
+      isBuffering = false;
+      for (let i = 3; i < 4 * width * height; i += 4) {
+        imageArray[i] = 0;
+      }
+
+      // Reset zoom level entirely
+      x_min = X_MIN_MIN;
+      x_max = X_MAX_MAX;
+      y_min = Y_MIN_MIN;
+      y_max = Y_MAX_MAX;
+    }
+    iterations = 0;
+    complexArrays.fill(0.0);
+    iterationCountArray.fill(0);
+    finishedArray.fill(0);
+    paintMandelbrot();
+  });
+}
+
