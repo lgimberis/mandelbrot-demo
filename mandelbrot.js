@@ -1,176 +1,186 @@
-export function setupMandelbrot();
-
+"use strict";
 const X_MIN_MIN = -2.05;
 const X_MAX_MAX = 0.47;
 const Y_MIN_MIN = -1.12;
 const Y_MAX_MAX = 1.12;
 const MAX_ITERATIONS = 400;
+const MIN_DELAY_BETWEEN_UPDATES = 50;  // milliseconds
+const ZOOM_FACTOR = 8;
 
-let x_min = X_MIN_MIN;
-let x_max = X_MAX_MAX;
-let y_min = Y_MIN_MIN;
-let y_max = Y_MAX_MAX;
 
-let isBuffering = false;
-let isPainting = false;
-let sequence = 0;
-
-async function paintMandelbrot() {
-  let our_sequence = sequence;
-  isPainting = true;
-  for (let iterations = 0; iterations < MAX_ITERATIONS; iterations++) {
-    if (our_sequence != sequence) {
-      isPainting = false;
-      return;
+function iterate(_event) {
+  if (this.iterations >= MAX_ITERATIONS) {
+    if (this.iterations == MAX_ITERATIONS) {
+      this.iterations++;
     }
-    let limiter = new Promise(r => setTimeout(r, 50));
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (finishedArray[y * width + x] == 0) {
-          let x_value = x_min + (x_max - x_min) * x / width;
-          let y_value = y_min + (y_max - y_min) * (height - y) / height;
+    return;
+  }
+  let iterations = this.iterations;
+  let height = this.height;
+  let width = this.width;
+  let x_min = this.x_min;
+  let x_max = this.x_max;
+  let y_min = this.y_min;
+  let y_max = this.y_max;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (this.finishedArray[y * width + x] == 0) {
+        let x_value = x_min + (x_max - x_min) * x / width;
+        let y_value = y_min + (y_max - y_min) * (height - y) / height;
 
-          iterationCountArray[y * width + x] += 1;
-          let x2 = complexArrays[3 * (y * width + x)];
-          let y2 = complexArrays[3 * (y * width + x) + 1];
-          let w = complexArrays[3 * (y * width + x) + 2];
+        this.iterationCountArray[y * width + x] += 1;
+        let x2 = this.complexArrays[3 * (y * width + x)];
+        let y2 = this.complexArrays[3 * (y * width + x) + 1];
+        let w = this.complexArrays[3 * (y * width + x) + 2];
 
-          if (x2 + y2 > 4.0 || iterations == MAX_ITERATIONS - 1) {
-            finishedArray[y * width + x] = 1;
-            let index = 4 * (y * width + x) + 3;
-            imageArray[index] = 255 * (iterations + 1 - iterationCountArray[y * width + x]) / (iterations + 1);
-          }
-
-
-          let x_new = x2 - y2 + x_value;
-          let y_new = w - x2 - y2 + y_value;
-
-          complexArrays[3 * (y * width + x)] = x_new * x_new;
-          complexArrays[3 * (y * width + x) + 1] = y_new * y_new;
-          complexArrays[3 * (y * width + x) + 2] = (x_new + y_new) * (x_new + y_new);
-        } else {
-          let index = 4 * (y * width + x);
-          imageArray[index + 3] = 255 * (iterations + 1 - iterationCountArray[y * width + x]) / (iterations + 1);
+        if (x2 + y2 > 4.0 || iterations == MAX_ITERATIONS - 1) {
+          this.finishedArray[y * width + x] = 1;
+          let index = 4 * (y * width + x) + 3;
+          this.imageArray[index] = 255 * (iterations + 1 - this.iterationCountArray[y * width + x]) / (iterations + 1);
         }
+
+        let x_new = x2 - y2 + x_value;
+        let y_new = w - x2 - y2 + y_value;
+
+        this.complexArrays[3 * (y * width + x)] = x_new * x_new;
+        this.complexArrays[3 * (y * width + x) + 1] = y_new * y_new;
+        this.complexArrays[3 * (y * width + x) + 2] = (x_new + y_new) * (x_new + y_new);
+      } else {
+        let index = 4 * (y * width + x);
+        this.imageArray[index + 3] = 255 * (iterations + 1 - this.iterationCountArray[y * width + x]) / (iterations + 1);
       }
     }
-    ctx.putImageData(new ImageData(imageArray, width, height), 0, 0);
-    await limiter;
   }
-  isPainting = false;
+  this.iterations++;
+  this.ctx.putImageData(new ImageData(this.imageArray, this.width, this.height), 0, 0);
 }
 
-export function setupMandelbrot() {
 
-  const canvas = document.getElementById('mandelbrot-canvas');
-  const ctx = canvas.getContext('2d');
-  const width = Math.min(window.innerWidth, canvas.parentElement.clientWidth);
-  const height = Math.min(window.innerHeight, canvas.parentElement.clientHeight);
-  ctx.canvas.width = width;
-  ctx.canvas.height = height;
-  const complexArrays = new Float64Array(3 * width * height).fill(0.0);
-  const iterationCountArray = new Int16Array(width * height).fill(0);
-  const finishedArray = new Uint8Array(width * height).fill(0);
-  const rect = canvas.getBoundingClientRect();
+function init(_event) {
+  this.canvas = document.getElementById('mandelbrot-canvas');
+  this.ctx = this.canvas.getContext('2d');
+  this.width = Math.min(window.innerWidth, this.canvas.parentElement.clientWidth);
+  this.height = Math.min(window.innerHeight, this.canvas.parentElement.clientHeight);
+  this.ctx.canvas.width = this.width;
+  this.ctx.canvas.height = this.height;
+  this.complexArrays = new Float64Array(3 * this.width * this.height).fill(0.0);
+  this.iterationCountArray = new Int16Array(this.width * this.height).fill(0);
+  this.finishedArray = new Uint8Array(this.width * this.height).fill(0);
+  this.rect = this.canvas.getBoundingClientRect();
+  this.iterations = 0;
 
-  const imageArray = new Uint8ClampedArray(4 * width * height).fill(0);
-  const bufferedImageArray = new Uint8ClampedArray(4 * width * height).fill(0);
+  this.imageArray = new Uint8ClampedArray(4 * this.width * this.height).fill(0);
+  this.bufferedImageArray = new Uint8ClampedArray(4 * this.width * this.height).fill(0);
 
-  for (let index = 0; index < width * height; index++) {
-    imageArray[4 * index] = 255;
-    bufferedImageArray[4 * index] = 255;
+  for (let index = 0; index < this.width * this.height; index++) {
+    this.imageArray[4 * index] = 255;
+    this.bufferedImageArray[4 * index] = 255;
   }
-  window.addEventListener('DOMContentLoaded', function() {
-    paintMandelbrot();
-  });
-
-  window.addEventListener('wheel', async function(event) {
-    // Determine scroll point epicenter
-    sequence += 1;
-    while (isPainting) {
-      await new Promise(r => setTimeout(r, 100));
-    }
-    let scrollX = window.scrollX + event.clientX - rect.left;
-    let scrollY = window.scrollY + event.clientY - rect.top;
-
-    if (scrollX < 0 || scrollX > width || scrollY < 0 || scrollY > height) {
-      return;
-    }
-    let epicenterX = x_min + (x_max - x_min) * scrollX / width;
-    let epicenterY = y_max - (y_max - y_min) * scrollY / height;
-    if (event.deltaY < 0) {
-      // Zoom in
-      const zoomFactor = 8;
-      let new_x_min = epicenterX - 0.5 / zoomFactor * (x_max - x_min);
-      let new_x_max = epicenterX + 0.5 / zoomFactor * (x_max - x_min);
-      if (new_x_min < X_MIN_MIN) {
-        new_x_min = X_MIN_MIN;
-        new_x_max = X_MIN_MIN + (x_max - x_min) / zoomFactor;
-      } else if (new_x_max > X_MAX_MAX) {
-        new_x_max = X_MAX_MAX;
-        new_x_min = X_MAX_MAX - (x_max - x_min) / zoomFactor;
-      }
-
-      let new_y_min = epicenterY - 0.5 / zoomFactor * (y_max - y_min);
-      let new_y_max = epicenterY + 0.5 / zoomFactor * (y_max - y_min);
-      if (new_y_min < Y_MIN_MIN) {
-        new_y_min = Y_MIN_MIN;
-        new_y_max = Y_MIN_MIN + (y_max - y_min) / zoomFactor;
-      } else if (new_y_max > Y_MAX_MAX) {
-        new_y_max = Y_MAX_MAX;
-        new_y_min = Y_MAX_MAX - (y_max - y_min) / zoomFactor;
-      }
-
-      // Rather than entirely clearing the image, and since it takes increasingly long times to update the drawing as we zoom in,
-      // Provide an initial zoomed sample of the previous image of this region
-
-      // Get the starting index of our copied region
-
-      const regionXOffset = Math.floor((new_x_min - x_min) / (x_max - x_min) * width);
-      const regionYOffset = Math.floor((y_max - new_y_max) / (y_max - y_min) * height);
-      let sourceIndex = regionYOffset * width + regionXOffset;
-      let bufferIndex = 0;
-      isBuffering = true;
-      for (let sourceY = 0; sourceY < Math.floor(height / zoomFactor); sourceY++) {
-        for (let sourceX = 0; sourceX < Math.floor(width / zoomFactor); sourceX++) {
-          for (let horizontalRepeat = 0; horizontalRepeat < zoomFactor; horizontalRepeat++) {
-            for (let verticalRepeat = 0; verticalRepeat < zoomFactor; verticalRepeat++) {
-              bufferedImageArray[4 * (bufferIndex + verticalRepeat * width) + 3] = imageArray[4 * sourceIndex + 3];
-            }
-            bufferIndex++;
-          }
-          sourceIndex++;
-        }
-        bufferIndex += (zoomFactor - 1) * width;
-        sourceIndex += width - Math.floor(width / zoomFactor);
-      }
-
-      for (let i = 3; i < 4 * width * height; i += 4) {
-        imageArray[i] = bufferedImageArray[i];
-      }
-
-      x_min = new_x_min;
-      x_max = new_x_max;
-      y_min = new_y_min;
-      y_max = new_y_max;
-    } else {
-      // Zoom out
-      isBuffering = false;
-      for (let i = 3; i < 4 * width * height; i += 4) {
-        imageArray[i] = 0;
-      }
-
-      // Reset zoom level entirely
-      x_min = X_MIN_MIN;
-      x_max = X_MAX_MAX;
-      y_min = Y_MIN_MIN;
-      y_max = Y_MAX_MAX;
-    }
-    iterations = 0;
-    complexArrays.fill(0.0);
-    iterationCountArray.fill(0);
-    finishedArray.fill(0);
-    paintMandelbrot();
-  });
+  setInterval(this.iterate.bind(this), MIN_DELAY_BETWEEN_UPDATES);
 }
 
+function zoom(event) {
+  // Determine scroll point epicenter
+  let scrollX = window.scrollX + event.clientX - this.rect.left;
+  let scrollY = window.scrollY + event.clientY - this.rect.top;
+
+  if (scrollX < 0 || scrollX > this.width || scrollY < 0 || scrollY > this.height) {
+    return;
+  }
+  let epicenterX = this.x_min + (this.x_max - this.x_min) * scrollX / this.width;
+  let epicenterY = this.y_max - (this.y_max - this.y_min) * scrollY / this.height;
+  if (event.deltaY < 0) {
+    // Zoom in
+    const zoomFactor = ZOOM_FACTOR;
+
+    function adjustBounds(epicenter, max, min, factor, limit_max, limit_min) {
+      let new_min = epicenter - 0.5 / factor * (max - min);
+      let new_max = epicenter + 0.5 / factor * (max - min);
+      if (new_min < limit_min) {
+        new_min = limit_min;
+        new_max = limit_min + (max - min) / factor;
+      } else if (new_max > limit_max) {
+        new_max = limit_max;
+        new_min = limit_max - (max - min) / factor;
+      }
+      return [new_max, new_min];
+    }
+
+    let [new_x_max, new_x_min] = adjustBounds(epicenterX, this.x_max, this.x_min, zoomFactor, X_MAX_MAX, X_MIN_MIN);
+    let [new_y_max, new_y_min] = adjustBounds(epicenterY, this.y_max, this.y_min, zoomFactor, Y_MAX_MAX, Y_MIN_MIN);
+
+    // Rather than entirely clearing the image, and since it takes increasingly long times to update the drawing as we zoom in,
+    // Provide an initial zoomed sample of the previous image of this region
+
+    // Get the starting index of our copied region
+
+    const regionXOffset = Math.floor((new_x_min - this.x_min) / (this.x_max - this.x_min) * this.width);
+    const regionYOffset = Math.floor((this.y_max - new_y_max) / (this.y_max - this.y_min) * this.height);
+    let sourceIndex = regionYOffset * this.width + regionXOffset;
+    let bufferIndex = 0;
+    for (let sourceY = 0; sourceY < Math.floor(this.height / zoomFactor); sourceY++) {
+      for (let sourceX = 0; sourceX < Math.floor(this.width / zoomFactor); sourceX++) {
+        for (let horizontalRepeat = 0; horizontalRepeat < zoomFactor; horizontalRepeat++) {
+          for (let verticalRepeat = 0; verticalRepeat < zoomFactor; verticalRepeat++) {
+            this.bufferedImageArray[4 * (bufferIndex + verticalRepeat * this.width) + 3] = this.imageArray[4 * sourceIndex + 3];
+          }
+          bufferIndex++;
+        }
+        sourceIndex++;
+      }
+      bufferIndex += (zoomFactor - 1) * this.width;
+      sourceIndex += this.width - Math.floor(this.width / zoomFactor);
+    }
+
+    for (let i = 3; i < 4 * this.width * this.height; i += 4) {
+      this.imageArray[i] = this.bufferedImageArray[i];
+    }
+
+    this.x_min = new_x_min;
+    this.x_max = new_x_max;
+    this.y_min = new_y_min;
+    this.y_max = new_y_max;
+  } else {
+    // Zoom out TODO
+    for (let i = 3; i < 4 * this.width * this.height; i += 4) {
+      this.imageArray[i] = 0;
+    }
+
+    // Reset zoom level entirely
+    this.x_min = X_MIN_MIN;
+    this.x_max = X_MAX_MAX;
+    this.y_min = Y_MIN_MIN;
+    this.y_max = Y_MAX_MAX;
+  }
+  this.iterations = 0;
+  this.complexArrays.fill(0.0);
+  this.iterationCountArray.fill(0);
+  this.finishedArray.fill(0);
+}
+
+
+let mandelbrot = {
+  height: 0,
+  width: 0,
+  ctx: null,
+  iterations: 0,
+  canvas: null,
+  rect: null,
+  x_min: X_MIN_MIN,
+  x_max: X_MAX_MAX,
+  y_min: Y_MIN_MIN,
+  y_max: Y_MAX_MAX,
+  finishedArray: [],
+  iterationCountArray: [],
+  complexArrays: [],
+  imageArray: [],
+  iterate: iterate,
+  init: init,
+  zoom: zoom,
+  setup: function() {
+    window.addEventListener('load', this.init.bind(this));
+    window.addEventListener('wheel', this.zoom.bind(this));
+  }
+}
+
+mandelbrot.setup();
