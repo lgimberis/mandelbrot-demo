@@ -159,7 +159,7 @@ function zoom(event) {
 }
 
 
-let mandelbrot = {
+export let mandelbrot = {
   height: 0,
   width: 0,
   ctx: null,
