@@ -7,6 +7,16 @@ const MAX_ITERATIONS = 400;
 const MIN_DELAY_BETWEEN_UPDATES = 50;  // milliseconds
 const ZOOM_FACTOR = 8;
 
+const EMPTY_COLOUR = [255, 255, 255];
+const FULL_COLOUR = [255, 0, 0];
+
+// Precompute our colour scheme
+let colour_slider = new Uint8ClampedArray(3 * 256);
+for (let i = 0; i < 256; i++) {
+  for (let j = 0; j < 3; j++) {
+    colour_slider[3 * i + j] = ((EMPTY_COLOUR[j] * (255 - i)) + (FULL_COLOUR[j] * i)) / 255;
+  }
+}
 
 function iterate(_event) {
   if (this.iterations >= MAX_ITERATIONS) {
@@ -35,8 +45,11 @@ function iterate(_event) {
 
         if (x2 + y2 > 4.0 || iterations == MAX_ITERATIONS - 1) {
           this.finishedArray[y * width + x] = 1;
-          let index = 4 * (y * width + x) + 3;
-          this.imageArray[index] = 255 * (iterations + 1 - this.iterationCountArray[y * width + x]) / (iterations + 1);
+          let index = 4 * (y * width + x);
+          let colour = Math.floor(255 * (iterations + 1 - this.iterationCountArray[y * width + x]) / (iterations + 1));
+          for (let i = 0; i < 3; i++) {
+            this.imageArray[index + i] = colour_slider[(colour * 3) + i];
+          }
         }
 
         let x_new = x2 - y2 + x_value;
@@ -47,7 +60,10 @@ function iterate(_event) {
         this.complexArrays[3 * (y * width + x) + 2] = (x_new + y_new) * (x_new + y_new);
       } else {
         let index = 4 * (y * width + x);
-        this.imageArray[index + 3] = 255 * (iterations + 1 - this.iterationCountArray[y * width + x]) / (iterations + 1);
+        let colour = Math.floor(255 * (iterations + 1 - this.iterationCountArray[y * width + x]) / (iterations + 1));
+        for (let i = 0; i < 3; i++) {
+          this.imageArray[index + i] = colour_slider[(colour * 3) + i];
+        }
       }
     }
   }
@@ -73,8 +89,10 @@ function init(_event) {
   this.bufferedImageArray = new Uint8ClampedArray(4 * this.width * this.height).fill(0);
 
   for (let index = 0; index < this.width * this.height; index++) {
-    this.imageArray[4 * index] = 255;
-    this.bufferedImageArray[4 * index] = 255;
+    for (let i = 0; i < 3; i++) {
+      this.imageArray[4 * index + i] = colour_slider[i];
+    }
+    this.imageArray[4 * index + 3] = 255;
   }
   setInterval(this.iterate.bind(this), MIN_DELAY_BETWEEN_UPDATES);
 }
@@ -122,7 +140,9 @@ function zoom(event) {
       for (let sourceX = 0; sourceX < Math.floor(this.width / zoomFactor); sourceX++) {
         for (let horizontalRepeat = 0; horizontalRepeat < zoomFactor; horizontalRepeat++) {
           for (let verticalRepeat = 0; verticalRepeat < zoomFactor; verticalRepeat++) {
-            this.bufferedImageArray[4 * (bufferIndex + verticalRepeat * this.width) + 3] = this.imageArray[4 * sourceIndex + 3];
+            for (let i = 0; i < 3; i++) {
+              this.bufferedImageArray[4 * (bufferIndex + verticalRepeat * this.width) + i] = this.imageArray[4 * sourceIndex + i];
+            }
           }
           bufferIndex++;
         }
@@ -132,7 +152,7 @@ function zoom(event) {
       sourceIndex += this.width - Math.floor(this.width / zoomFactor);
     }
 
-    for (let i = 3; i < 4 * this.width * this.height; i += 4) {
+    for (let i = 0; i < 4 * this.width * this.height; i++) {
       this.imageArray[i] = this.bufferedImageArray[i];
     }
 
@@ -142,8 +162,10 @@ function zoom(event) {
     this.y_max = new_y_max;
   } else {
     // Zoom out TODO
-    for (let i = 3; i < 4 * this.width * this.height; i += 4) {
-      this.imageArray[i] = 0;
+    for (let i = 0; i < this.width * this.height; i++) {
+      for (let j = 0; j < 3; j++) {
+        this.imageArray[4 * i + j] = 0;
+      }
     }
 
     // Reset zoom level entirely
