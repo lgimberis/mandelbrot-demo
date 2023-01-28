@@ -7,17 +7,6 @@ const MAX_ITERATIONS = 400;
 const MIN_DELAY_BETWEEN_UPDATES = 50;  // milliseconds
 const ZOOM_FACTOR = 8;
 
-const EMPTY_COLOUR = [255, 255, 255];
-const FULL_COLOUR = [255, 0, 0];
-
-// Precompute our colour scheme
-let colour_slider = new Uint8ClampedArray(3 * 256);
-for (let i = 0; i < 256; i++) {
-  for (let j = 0; j < 3; j++) {
-    colour_slider[3 * i + j] = ((EMPTY_COLOUR[j] * (255 - i)) + (FULL_COLOUR[j] * i)) / 255;
-  }
-}
-
 function iterate(_event) {
   if (this.iterations >= MAX_ITERATIONS) {
     if (this.iterations == MAX_ITERATIONS) {
@@ -48,7 +37,7 @@ function iterate(_event) {
           let index = 4 * (y * width + x);
           let colour = Math.floor(255 * (iterations + 1 - this.iterationCountArray[y * width + x]) / (iterations + 1));
           for (let i = 0; i < 3; i++) {
-            this.imageArray[index + i] = colour_slider[(colour * 3) + i];
+            this.imageArray[index + i] = this.colourSlider[(colour * 3) + i];
           }
         }
 
@@ -62,7 +51,7 @@ function iterate(_event) {
         let index = 4 * (y * width + x);
         let colour = Math.floor(255 * (iterations + 1 - this.iterationCountArray[y * width + x]) / (iterations + 1));
         for (let i = 0; i < 3; i++) {
-          this.imageArray[index + i] = colour_slider[(colour * 3) + i];
+          this.imageArray[index + i] = this.colourSlider[(colour * 3) + i];
         }
       }
     }
@@ -72,7 +61,7 @@ function iterate(_event) {
 }
 
 
-function init(_event) {
+function init(emptyColour = [255, 255, 255], fullColour = [255, 0, 0]) {
   this.canvas = document.getElementById('mandelbrot-canvas');
   this.ctx = this.canvas.getContext('2d');
   this.width = Math.min(window.innerWidth, this.canvas.parentElement.clientWidth);
@@ -88,9 +77,17 @@ function init(_event) {
   this.imageArray = new Uint8ClampedArray(4 * this.width * this.height).fill(0);
   this.bufferedImageArray = new Uint8ClampedArray(4 * this.width * this.height).fill(0);
 
+  // Precompute our colour scheme
+  this.colourSlider = new Uint8ClampedArray(3 * 256);
+  for (let i = 0; i < 256; i++) {
+    for (let j = 0; j < 3; j++) {
+      this.colourSlider[3 * i + j] = ((emptyColour[j] * (255 - i)) + (fullColour[j] * i)) / 255;
+    }
+  }
+
   for (let index = 0; index < this.width * this.height; index++) {
     for (let i = 0; i < 3; i++) {
-      this.imageArray[4 * index + i] = colour_slider[i];
+      this.imageArray[4 * index + i] = this.colourSlider[i];
     }
     this.imageArray[4 * index + 3] = 255;
   }
@@ -167,7 +164,7 @@ function zoom(event) {
     // Zoom out TODO
     for (let i = 0; i < this.width * this.height; i++) {
       for (let j = 0; j < 3; j++) {
-        this.imageArray[4 * i + j] = EMPTY_COLOUR[j];
+        this.imageArray[4 * i + j] = this.colourSlider[j];
       }
     }
 
@@ -199,11 +196,12 @@ export let mandelbrot = {
   iterationCountArray: [],
   complexArrays: [],
   imageArray: [],
+  colourSlider: [],
   iterate: iterate,
   init: init,
   zoom: zoom,
-  setup: function() {
-    window.addEventListener('load', this.init.bind(this));
+  setup: function(emptyColour = [255, 255, 255], fullColour = [255, 0, 0]) {
+    window.addEventListener('load', this.init.bind(this, emptyColour, fullColour));
     window.addEventListener('wheel', this.zoom.bind(this));
   }
 }
