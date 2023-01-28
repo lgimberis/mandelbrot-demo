@@ -211,5 +211,3 @@ export let mandelbrot = {
     window.addEventListener('load', this.init.bind(this, emptyColour, fullColour));
   }
 }
-
-mandelbrot.setup();
