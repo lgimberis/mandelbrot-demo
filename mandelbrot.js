@@ -152,8 +152,11 @@ function zoom(event) {
       sourceIndex += this.width - Math.floor(this.width / zoomFactor);
     }
 
-    for (let i = 0; i < 4 * this.width * this.height; i++) {
-      this.imageArray[i] = this.bufferedImageArray[i];
+    for (let i = 0; i < this.width * this.height; i++) {
+      for (let j = 0; j < 3; j++) {
+        // Don't copy opacity
+        this.imageArray[4 * i + j] = this.bufferedImageArray[4 * i + j];
+      }
     }
 
     this.x_min = new_x_min;
@@ -164,7 +167,7 @@ function zoom(event) {
     // Zoom out TODO
     for (let i = 0; i < this.width * this.height; i++) {
       for (let j = 0; j < 3; j++) {
-        this.imageArray[4 * i + j] = 0;
+        this.imageArray[4 * i + j] = EMPTY_COLOUR[j];
       }
     }
 
