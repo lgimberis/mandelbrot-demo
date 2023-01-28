@@ -92,12 +92,15 @@ function init(emptyColour = [255, 255, 255], fullColour = [255, 0, 0]) {
     this.imageArray[4 * index + 3] = 255;
   }
   setInterval(this.iterate.bind(this), MIN_DELAY_BETWEEN_UPDATES);
+  this.canvas.addEventListener('wheel', this.zoom.bind(this));
 }
 
 function zoom(event) {
   // Determine scroll point epicenter
-  let scrollX = window.scrollX + event.clientX - this.rect.left;
-  let scrollY = window.scrollY + event.clientY - this.rect.top;
+  event.preventDefault();
+  this.rect = this.canvas.getBoundingClientRect();
+  let scrollX = event.clientX - this.rect.left;
+  let scrollY = event.clientY - this.rect.top;
 
   if (scrollX < 0 || scrollX > this.width || scrollY < 0 || scrollY > this.height) {
     return;
@@ -127,26 +130,30 @@ function zoom(event) {
     // Rather than entirely clearing the image, and since it takes increasingly long times to update the drawing as we zoom in,
     // Provide an initial zoomed sample of the previous image of this region
 
-    // Get the starting index of our copied region
-
+    // Get the starting index of our copied region within imageArray
     const regionXOffset = Math.floor((new_x_min - this.x_min) / (this.x_max - this.x_min) * this.width);
     const regionYOffset = Math.floor((this.y_max - new_y_max) / (this.y_max - this.y_min) * this.height);
     let sourceIndex = regionYOffset * this.width + regionXOffset;
     let bufferIndex = 0;
-    for (let sourceY = 0; sourceY < Math.floor(this.height / zoomFactor); sourceY++) {
-      for (let sourceX = 0; sourceX < Math.floor(this.width / zoomFactor); sourceX++) {
-        for (let horizontalRepeat = 0; horizontalRepeat < zoomFactor; horizontalRepeat++) {
-          for (let verticalRepeat = 0; verticalRepeat < zoomFactor; verticalRepeat++) {
+    for (let sourceY = 0; sourceY < Math.ceil(this.height / zoomFactor); sourceY++) {
+      let verticalRepeats = Math.min(zoomFactor, this.height - zoomFactor * sourceY);
+      for (let sourceX = 0; sourceX < Math.ceil(this.width / zoomFactor); sourceX++) {
+        let horizontalRepeats = Math.min(zoomFactor, this.width - zoomFactor * sourceX);
+
+        // For each pixel of the source image, put zoomFactor copies of the pixel into bufferedImageArray in x and y dimensions
+        for (let horizontalRepeat = 0; horizontalRepeat < horizontalRepeats; horizontalRepeat++) {
+          for (let verticalRepeat = 0; verticalRepeat < verticalRepeats; verticalRepeat++) {
             for (let i = 0; i < 3; i++) {
               this.bufferedImageArray[4 * (bufferIndex + verticalRepeat * this.width) + i] = this.imageArray[4 * sourceIndex + i];
             }
           }
-          bufferIndex++;
+          bufferIndex++; // Move one pixel to the right to repeat horizontally
         }
-        sourceIndex++;
+        sourceIndex++; // Move one pixel to the right in the SOURCE, from which we copy
       }
+      // Skip the indices already filled by vertically repeated pixels
       bufferIndex += (zoomFactor - 1) * this.width;
-      sourceIndex += this.width - Math.floor(this.width / zoomFactor);
+      sourceIndex += this.width - Math.ceil(this.width / zoomFactor);
     }
 
     for (let i = 0; i < this.width * this.height; i++) {
@@ -202,7 +209,6 @@ export let mandelbrot = {
   zoom: zoom,
   setup: function(emptyColour = [255, 255, 255], fullColour = [255, 0, 0]) {
     window.addEventListener('load', this.init.bind(this, emptyColour, fullColour));
-    window.addEventListener('wheel', this.zoom.bind(this));
   }
 }
 
